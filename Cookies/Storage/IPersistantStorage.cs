@@ -7,6 +7,6 @@ namespace Cookies.Storage
     {
         string GetFile();
 
-        void Set(IEnumerable<Cookie> cookies);
+        void Add(IEnumerable<Cookie> cookies);
     }
 }

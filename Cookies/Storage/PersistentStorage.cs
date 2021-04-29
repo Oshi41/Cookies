@@ -18,33 +18,53 @@ namespace Cookies.Storage
             _path = path;
             _loadFromInner = new Lazy<Task<List<Cookie>>>(inner.GetCookies);
 
-            if (!File.Exists(path))
+            if (!File.Exists(GetFile()))
             {
-                File.CreateText(path).Close();
+                File.CreateText(GetFile()).Close();
             }
         }
         
         public async Task<List<Cookie>> GetCookies()
         {
+            var cookies = new List<Cookie>(Get());
+
             if (!_loadFromInner.IsValueCreated)
             {
-                var cookies = await _loadFromInner.Value;
-                Set(cookies);
+                cookies.AddRange(await _loadFromInner.Value);
             }
+            
+            Set(cookies);
 
-            var json = await File.ReadAllTextAsync(_path);
-            return JsonConvert.DeserializeObject<List<Cookie>>(json);
+            return cookies;
         }
 
         public string GetFile()
         {
             return _path;
         }
-
-        public void Set(IEnumerable<Cookie> cookies)
+        
+        private void Set(List<Cookie> cookies)
         {
             var json = JsonConvert.SerializeObject(cookies.ToList());
             File.WriteAllText(_path, json);
+        }
+
+        private Cookie[] Get()
+        {
+            var json = File.ReadAllText(GetFile());
+            return JsonConvert.DeserializeObject<Cookie[]>(json);
+        }
+
+        public void Add(IEnumerable<Cookie> cookies)
+        {
+            var toAdd = cookies?.ToList();
+            if (toAdd?.Any() != true) 
+                return;
+            
+            
+            var result = GetCookies().Result;
+            result.AddRange(toAdd);
+            Set(result);
         }
     }
 }
