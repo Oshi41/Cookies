@@ -57,7 +57,7 @@ namespace Cookies.Storage
                 // https://metacpan.org/pod/HTTP::Cookies::Chrome
                 using (var command =
                     new SQLiteCommand(
-                        "select encrypted_value, name, path, host_key, expires_utc, is_secure, has_expires  from cookies",
+                        "select encrypted_value, name, path, host_key, expires_utc, is_secure, has_expires, is_httponly  from cookies",
                         conn))
                 {
                     using (var reader = await command.ExecuteReaderAsync())
@@ -70,7 +70,7 @@ namespace Cookies.Storage
                             {
                                 var expires = DateTime.MaxValue;
 
-                                if ((bool) reader["has_expires"])
+                                if (Equals(1, reader["has_expires"]))
                                 {
                                     // https://stackoverflow.com/questions/43518199/cookies-expiration-time-format 
                                     expires = DateTime.UnixEpoch.AddSeconds(((long) reader["expires_utc"] / 1000000) -
@@ -85,8 +85,8 @@ namespace Cookies.Storage
                                     (string) reader["host_key"])
                                 {
                                     Expires = expires,
-                                    Secure = (bool) reader["is_secure"],
-                                    HttpOnly = (bool) reader["is_httponly"],
+                                    Secure = Equals(1, reader["is_secure"]),
+                                    HttpOnly = Equals(1, reader["is_httponly"]),
                                 };
 
                                 list.Add(cookie);
