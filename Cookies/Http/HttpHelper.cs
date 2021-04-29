@@ -29,9 +29,8 @@ namespace Cookies
             if (storage is IPersistantStorage)
             {
                 _hashTableField = typeof(CookieContainer).GetField("m_domainTable", BindingFlags.NonPublic |
-                                                                           BindingFlags.GetField |
-                                                                           BindingFlags.Instance);
-                
+                    BindingFlags.GetField |
+                    BindingFlags.Instance);
             }
         }
 
@@ -49,29 +48,43 @@ namespace Cookies
 
             if (handler?.CookieContainer == null)
                 return;
-            
+
             if (!(_storage is IPersistantStorage persistant))
                 return;
 
             if (_hashTableField.GetValue(handler.CookieContainer) is Hashtable table)
             {
                 var list = new List<Cookie>();
-            
+
                 foreach (var key in table.Keys)
                 {
                     var item = table[key];
 
                     if (_property == null)
                     {
-                        _property = item.GetType().GetField("m_list", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
+                        _property = item.GetType().GetField("m_list",
+                            BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
                     }
-                    
+
                     if (_property?.GetValue(item) is SortedList sortedList)
                         list.AddRange(sortedList.Values.OfType<Cookie>());
                 }
-            
+
                 persistant.Add(list);
             }
+        }
+
+        protected virtual async Task<HttpClientHandler> Create()
+        {
+            var handler = await _getHandler(_storage);
+
+            var cookies = await _storage.GetCookies();
+            foreach (var cookie in cookies)
+            {
+                handler.CookieContainer.Add(cookie);
+            }
+
+            return handler;
         }
 
         public virtual async Task<string> PostAsync(
@@ -80,13 +93,13 @@ namespace Cookies
             TimeSpan? maxTime = null
         )
         {
-            using var handler = await _getHandler(_storage);
+            using var handler = await Create();
             using var client = new HttpClient(handler);
             var content = new FormUrlEncodedContent(parameters);
             using var response = await client.PostAsync(endPoint, content, CreateToken(maxTime));
             if (response.IsSuccessStatusCode)
                 SaveCookies(handler);
-            
+
             return await response.Content.ReadAsStringAsync();
         }
 
@@ -107,14 +120,14 @@ namespace Cookies
 
             var url = builder.ToString();
 
-            using var handler = await _getHandler(_storage);
+            using var handler = await Create();
             using var client = new HttpClient(handler);
             using var response = await client.GetAsync(url, CreateToken(maxTime));
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
                 SaveCookies(handler);
             SaveCookies(handler);
-                
+
             return (
                 StatusCode: response.StatusCode,
                 reqHeaders: client.DefaultRequestHeaders.ToString(),
