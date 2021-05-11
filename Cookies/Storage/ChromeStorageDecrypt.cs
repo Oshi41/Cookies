@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Data.SQLite;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -117,13 +115,13 @@ namespace Cookies.Storage
 
                 // Последние 16 байт
                 var tag = encrypted.TakeLast(16).ToArray();
-
+                
                 // все оставшееся - текст
                 var cipher = encrypted.Skip(3 + 12).Take(encrypted.Length - 3 - 12 - 16).ToArray();
 
                 var aesGcm = new AesGcm(_decryptedKey);
                 var plaintext = new byte[cipher.Length];
-
+                
                 aesGcm.Decrypt(nonce, cipher, tag, plaintext);
                 encrypted = plaintext;
             }
